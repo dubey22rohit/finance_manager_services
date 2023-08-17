@@ -49,7 +49,7 @@ func main() {
 	}
 
 	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%s", cfg.port),
+		Addr:    fmt.Sprintf(":%d", cfg.port),
 		Handler: app.routes(),
 	}
 
