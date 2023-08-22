@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"log"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -59,7 +58,6 @@ func (u *User) GetAll() ([]*User, error) {
 			&user.UpdatedAt,
 		)
 		if err != nil {
-			log.Println("error scanning rows GetAll()", err)
 			return nil, err
 		}
 		users = append(users, &user)
@@ -89,7 +87,6 @@ func (u *User) GetByEmail(email string) (*User, error) {
 	)
 
 	if err != nil {
-		log.Println("error scanning row GetByEmail()", err)
 		return nil, err
 	}
 
@@ -117,7 +114,6 @@ func (u *User) GetByID(id int64) (*User, error) {
 	)
 
 	if err != nil {
-		log.Println("error scanning row GetByID()", err)
 		return nil, err
 	}
 
@@ -133,7 +129,6 @@ func (u *User) Update() error {
 
 	_, err := db.ExecContext(ctx, query, u.Email, u.FirstName, u.LastName, time.Now(), u.ID)
 	if err != nil {
-		log.Println("error updating user Update()", err)
 		return err
 	}
 
@@ -149,7 +144,6 @@ func (u *User) Delete(id int64) error {
 
 	_, err := db.ExecContext(ctx, query, id)
 	if err != nil {
-		log.Println("error deleting the user Delete()", err)
 		return err
 	}
 
@@ -181,7 +175,6 @@ func (u *User) Insert(user User) (int64, error) {
 	).Scan(&newID)
 
 	if err != nil {
-		log.Println("error inserting user Insert()", err)
 		return 0, err
 	}
 
@@ -193,7 +186,6 @@ func (u *User) ResetPassword(password string) error {
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 12)
 	if err != nil {
-		log.Println("error hashing password ReserPassword()", err)
 		return err
 	}
 
@@ -202,7 +194,6 @@ func (u *User) ResetPassword(password string) error {
 
 	_, err = db.ExecContext(ctx, query, hashedPassword, u.ID)
 	if err != nil {
-		log.Println("error resetting password ResetPassword()", err)
 		return err
 	}
 

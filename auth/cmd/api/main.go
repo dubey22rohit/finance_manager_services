@@ -1,81 +1,91 @@
 package main
 
 import (
-	"context"
 	"database/sql"
-	"flag"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
-	_ "github.com/lib/pq"
+	"github.com/dubey22rohit/finance_manager_services/auth/cmd/data"
+	_ "github.com/jackc/pgconn"
+	_ "github.com/jackc/pgx/v4"
+	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
-type Config struct {
-	DB       *sql.DB
-	Models   any
-	port     int
-	env      string
-	dbconfig struct {
-		dsn          string
-		maxOpenConns int
-		maxIdleConns int
-		maxIdleTime  int
-	}
+const webPort = "80"
+
+type AppConfig struct {
+	DB     *sql.DB
+	Models data.Models
 }
 
 func main() {
 	log.Println("starting auth service")
 
-	var cfg Config
-
-	flag.IntVar(&cfg.port, "port", 4000, "Auth service server port")
-	flag.StringVar(&cfg.env, "env", "development", "Environment(development|staging|production)")
-
-	flag.StringVar(&cfg.dbconfig.dsn, "auth-sb-dsn", "", "Auth PostgresSQL DB dns")
-
-	flag.IntVar(&cfg.dbconfig.maxIdleConns, "db-max-idle-conns", 25, "DB max idle connections")
-	flag.IntVar(&cfg.dbconfig.maxOpenConns, "db-max-open-conns", 25, "DB max open connections")
-	flag.IntVar(&cfg.dbconfig.maxIdleTime, "db-max-idle-time", 15, "DB max idle time")
-
-	db, err := openDB(cfg)
-	if err != nil {
-		log.Fatalf("unable to start auth db %v", err)
+	db := connectToDB()
+	if db == nil {
+		log.Fatalf("unable to start auth db")
+		return
 	}
+	defer db.Close()
 
-	app := Config{
-		DB: db,
+	app := AppConfig{
+		DB:     db,
+		Models: data.New(db),
 	}
 
 	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%d", cfg.port),
+		Addr:    fmt.Sprintf(":%s", webPort),
 		Handler: app.routes(),
 	}
 
-	err = srv.ListenAndServe()
+	err := srv.ListenAndServe()
 	if err != nil {
 		log.Panic("error starting server: ", err)
 	}
 }
 
-func openDB(cfg Config) (*sql.DB, error) {
-	db, err := sql.Open("postgres", cfg.dbconfig.dsn)
+func openDB(dsn string) (*sql.DB, error) {
+	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return nil, err
 	}
 
-	db.SetMaxIdleConns(cfg.dbconfig.maxIdleConns)
-	db.SetMaxOpenConns(cfg.dbconfig.maxOpenConns)
-	db.SetConnMaxIdleTime(time.Duration(cfg.dbconfig.maxIdleTime))
+	db.SetMaxIdleConns(25)
+	db.SetMaxOpenConns(25)
+	db.SetConnMaxIdleTime(time.Duration(time.Duration(15).Seconds()))
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	err = db.PingContext(ctx)
+	err = db.Ping()
 	if err != nil {
 		return nil, err
 	}
 
 	return db, nil
+}
+
+func connectToDB() *sql.DB {
+	var counts int32
+
+	dsn := os.Getenv("DSN")
+	for {
+		conn, err := openDB(dsn)
+		if err != nil {
+			log.Println("Postgres is not ready yet....")
+			counts++
+		} else {
+			log.Println("connected to postgres!")
+			return conn
+		}
+
+		if counts > 10 {
+			log.Println("error connecting to postgres", err)
+			return nil
+		}
+
+		log.Println("Backing off for 2 seconds....")
+		time.Sleep(2 * time.Second)
+		continue
+	}
 }

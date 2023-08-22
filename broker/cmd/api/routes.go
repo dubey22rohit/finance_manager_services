@@ -8,9 +8,8 @@ import (
 	"github.com/go-chi/cors"
 )
 
-func (app *AppConfig) routes() http.Handler {
+func (app *BrokerConfig) routes() http.Handler {
 	mux := chi.NewRouter()
-
 	mux.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"https://*", "http://*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
@@ -22,7 +21,11 @@ func (app *AppConfig) routes() http.Handler {
 
 	mux.Use(middleware.Heartbeat("/ping"))
 
-	mux.Post("/authenticate", app.Authenticate)
+	mux.Post("/", app.Broker)
+
+	mux.Post("/log-grpc", app.LogViaGRPC)
+
+	mux.Post("/handle", app.HandleSubmission)
 
 	return mux
 }

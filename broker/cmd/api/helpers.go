@@ -7,14 +7,14 @@ import (
 	"net/http"
 )
 
-type JSONResponse struct {
+type jsonResponse struct {
 	Error   bool   `json:"error"`
 	Message string `json:"message"`
 	Data    any    `json:"data,omitempty"`
 }
 
-func (app *AppConfig) readJSON(w http.ResponseWriter, r *http.Request, data any) error {
-	maxBytes := 1048576 // 1mB
+func (app *BrokerConfig) readJSON(w http.ResponseWriter, r *http.Request, data any) error {
+	maxBytes := 1048576
 
 	r.Body = http.MaxBytesReader(w, r.Body, int64(maxBytes))
 
@@ -26,13 +26,13 @@ func (app *AppConfig) readJSON(w http.ResponseWriter, r *http.Request, data any)
 
 	err = dec.Decode(&struct{}{})
 	if err != io.EOF {
-		return errors.New("body must have a single JSON value")
+		return errors.New("body must have only a single JSON value")
 	}
 
 	return nil
 }
 
-func (app *AppConfig) writeJSON(w http.ResponseWriter, status int, data any, headers ...http.Header) error {
+func (app *BrokerConfig) writeJSON(w http.ResponseWriter, status int, data any, headers ...http.Header) error {
 	out, err := json.Marshal(data)
 	if err != nil {
 		return err
@@ -47,24 +47,19 @@ func (app *AppConfig) writeJSON(w http.ResponseWriter, status int, data any, hea
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_, err = w.Write(out)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
-func (app *AppConfig) errorJSON(w http.ResponseWriter, err error, status ...int) error {
+func (app *BrokerConfig) errorJSON(w http.ResponseWriter, err error, status ...int) error {
 	statusCode := http.StatusBadRequest
 
 	if len(status) > 0 {
 		statusCode = status[0]
 	}
 
-	payload := JSONResponse{
-		Error:   true,
-		Message: err.Error(),
-	}
+	var payload jsonResponse
+	payload.Error = true
+	payload.Message = err.Error()
 
 	return app.writeJSON(w, statusCode, payload)
 }
