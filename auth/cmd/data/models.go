@@ -25,8 +25,6 @@ type Models struct {
 type User struct {
 	ID        int64     `json:"id"`
 	Email     string    `json:"email"`
-	FirstName string    `json:"first_name"`
-	LastName  string    `json:"last_name"`
 	Password  string    `json:"password"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -34,7 +32,7 @@ type User struct {
 
 // * Gets all the users registered with the app
 func (u *User) GetAll() ([]*User, error) {
-	query := `SELECT id, email, first_name, last_name, created_at, updated_at FROM users ORDER BY last_name`
+	query := `SELECT id, email, created_at, updated_at FROM users ORDER BY id`
 
 	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
 	defer cancel()
@@ -52,8 +50,6 @@ func (u *User) GetAll() ([]*User, error) {
 		err := rows.Scan(
 			&user.ID,
 			&user.Email,
-			&user.FirstName,
-			&user.LastName,
 			&user.CreatedAt,
 			&user.UpdatedAt,
 		)
@@ -68,7 +64,7 @@ func (u *User) GetAll() ([]*User, error) {
 
 // * Gets one user by email
 func (u *User) GetByEmail(email string) (*User, error) {
-	query := `SELECT id, email, first_name, last_name, created_at, updated_at FROM users WHERE email = $1 ORDER BY last_name`
+	query := `SELECT id, email, password, created_at, updated_at FROM users WHERE email = $1 ORDER BY id`
 
 	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
 	defer cancel()
@@ -80,8 +76,7 @@ func (u *User) GetByEmail(email string) (*User, error) {
 	err := row.Scan(
 		&user.ID,
 		&user.Email,
-		&user.FirstName,
-		&user.LastName,
+		&user.Password,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)
@@ -95,7 +90,7 @@ func (u *User) GetByEmail(email string) (*User, error) {
 
 // * Gets one user by user ID
 func (u *User) GetByID(id int64) (*User, error) {
-	query := `SELECT id, email, first_name, last_name, created_at, updated_at FROM users WHERE id = $1 ORDER BY last_name`
+	query := `SELECT id, email, created_at, updated_at FROM users WHERE id = $1 ORDER BY id`
 
 	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
 	defer cancel()
@@ -107,8 +102,6 @@ func (u *User) GetByID(id int64) (*User, error) {
 	err := row.Scan(
 		&user.ID,
 		&user.Email,
-		&user.FirstName,
-		&user.LastName,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)
@@ -122,12 +115,12 @@ func (u *User) GetByID(id int64) (*User, error) {
 
 // * Updates one user in the database, using the info stored in the receiver u
 func (u *User) Update() error {
-	query := `UPDATE users SET email = $1, first_name = $2, last_name = $3, updated_at = $4 WHERE id = $5`
+	query := `UPDATE users SET email = $1, updated_at = $2 WHERE id = $3`
 
 	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
 	defer cancel()
 
-	_, err := db.ExecContext(ctx, query, u.Email, u.FirstName, u.LastName, time.Now(), u.ID)
+	_, err := db.ExecContext(ctx, query, u.Email, time.Now(), u.ID)
 	if err != nil {
 		return err
 	}
@@ -151,9 +144,9 @@ func (u *User) Delete(id int64) error {
 }
 
 // *Inserts a new user in the database
-func (u *User) Insert(user User) (int64, error) {
-	query := `INSERT INTO users (email, first_name, last_name, password, created_at, updated_at) VALUES
-	($1, $2, $3, $4, $5, $6) returning id`
+func (u *User) Insert(user *User) (int64, error) {
+	query := `INSERT INTO users (email, password, created_at, updated_at) VALUES
+	($1, $2, $3, $4) returning id`
 
 	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
 	defer cancel()
@@ -167,8 +160,6 @@ func (u *User) Insert(user User) (int64, error) {
 
 	err = db.QueryRowContext(ctx, query,
 		user.Email,
-		user.FirstName,
-		user.LastName,
 		hashedPassword,
 		time.Now(),
 		time.Now(),

@@ -55,7 +55,7 @@ func openDB(dsn string) (*sql.DB, error) {
 
 	db.SetMaxIdleConns(25)
 	db.SetMaxOpenConns(25)
-	db.SetConnMaxIdleTime(time.Duration(time.Duration(15).Seconds()))
+	db.SetConnMaxIdleTime(time.Duration(15))
 
 	err = db.Ping()
 	if err != nil {
@@ -84,8 +84,8 @@ func connectToDB() *sql.DB {
 			return nil
 		}
 
-		log.Println("Backing off for 2 seconds....")
-		time.Sleep(2 * time.Second)
+		log.Println("Backing off for 4 seconds....")
+		time.Sleep(4 * time.Second)
 		continue
 	}
 }
