@@ -27,7 +27,8 @@ services:
       DSN: "host=pg_db port=5432 user=youruser password=yourpassword dbname=yourdbname sslmode=disable timezone=UTC connect_timeout=5"
 
   pg_db:
-    image: 'postgres'
+    build:
+      dockerfile: ./dockerfiles/postgres.dockerfile
     ports:
       - "5432:5432"
     restart: always
